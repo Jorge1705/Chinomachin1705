@@ -1,20 +1,15 @@
-"""Configuración de variables de entorno."""
 import os
-
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
 
-
 def _texto(nombre, defecto=""):
     return (os.environ.get(nombre) or defecto).strip()
 
-
 def _bandera(nombre, defecto="0"):
     return _texto(nombre, defecto).lower() in ("1", "true", "si", "sí", "yes")
-
 
 TELEGRAM_BOT_TOKEN = _texto("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = _texto("TELEGRAM_CHAT_ID")
@@ -25,3 +20,6 @@ MODO_CLASE = _bandera("MODO_CLASE", "1")
 MODO_SIMULACION = _bandera("MODO_SIMULACION") or not (OPENAI_API_KEY and ALPHAVANTAGE_API_KEY)
 MAX_ANALISIS_POR_RUN = int(_texto("MAX_ANALISIS_POR_RUN", "3"))
 CARPETA_SALIDAS = _texto("CARPETA_SALIDAS", "salidas")
+
+def resumen():
+    return {"modo": "SIMULACIÓN" if MODO_SIMULACION else "REAL", "modelo": MODELO, "openai_configurada": bool(OPENAI_API_KEY), "alpha_vantage_configurada": bool(ALPHAVANTAGE_API_KEY)}
