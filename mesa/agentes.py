@@ -4,13 +4,12 @@ from . import config
 
 DESCARGO = "Nota educativa, no es recomendación de inversión."
 FIRMA_VERA = "✍️ Vera · Comunicadora"
-
+PERSONALIDAD_VERA = "Cálida, clara y prudente: conclusión primero, lenguaje sencillo y sin promesas."
 
 def llamar_openai(instrucciones, mensaje, max_tokens=900):
     from openai import OpenAI
     respuesta = OpenAI(api_key=config.OPENAI_API_KEY).responses.create(model=config.MODELO, instructions=instrucciones, input=mensaje, max_output_tokens=max_tokens)
     return respuesta.output_text.strip()
-
 
 def extraer_json(texto):
     inicio, fin = texto.find("{"), texto.rfind("}")
@@ -18,17 +17,14 @@ def extraer_json(texto):
         raise ValueError("OpenAI no devolvió JSON")
     return json.loads(texto[inicio:fin + 1])
 
-
 def a_numero(valor):
     try:
         return float(str(valor).replace(",", "").replace("%", ""))
     except (TypeError, ValueError):
         return None
 
-
 def ficha_demo(ticker, motivo="SIMULACIÓN"):
     return {"ticker": ticker, "precio": "250.5", "max_52s": "300", "min_52s": "200", "beta": "0.7", "fuente": "DEMO (" + motivo + ")"}
-
 
 def agente_recolector(ticker):
     if config.MODO_SIMULACION:
@@ -41,13 +37,11 @@ def agente_recolector(ticker):
     except Exception:
         return ficha_demo(ticker, "sin conexión"), []
 
-
 def calcular_indicadores(ficha):
     precio, alto, bajo, beta = map(a_numero, (ficha.get("precio"), ficha.get("max_52s"), ficha.get("min_52s"), ficha.get("beta")))
     posicion = round((precio - bajo) * 100 / (alto - bajo), 1) if None not in (precio, alto, bajo) and alto != bajo else None
     color = "⚪" if beta is None else "🟢" if beta < .8 else "🟡" if beta < 1.3 else "🔴"
     return {"posicion_rango_52s_pct": posicion, "semaforo_beta": color + " beta " + str(beta if beta is not None else "sin dato")}
-
 
 def agente_analista(ficha):
     indicadores = calcular_indicadores(ficha)
@@ -56,9 +50,9 @@ def agente_analista(ficha):
     datos = extraer_json(llamar_openai("Eres analista financiero educativo. Responde JSON.", json.dumps({"ficha": ficha, "indicadores": indicadores}, ensure_ascii=False)))
     return {"ficha": ficha, "indicadores": indicadores, **datos}
 
-
 def agente_comunicador(analisis):
     if config.MODO_SIMULACION:
-        return FIRMA_VERA + "\n" + analisis["ficha"]["ticker"] + ": análisis simulado.\n" + DESCARGO
-    nota = llamar_openai("Redacta una nota financiera educativa breve.", json.dumps(analisis, ensure_ascii=False))
+        return FIRMA_VERA + "\nConclusión: revisa " + analisis["ficha"]["ticker"] + " con calma.\nPregunta útil: ¿qué cambió en el negocio?\n" + DESCARGO
+    instrucciones = "Eres Vera, una comunicadora cálida, clara y prudente. Da la conclusión primero, explica una razón en lenguaje sencillo y cierra con una pregunta útil para investigar. No des recomendaciones ni promesas de inversión."
+    nota = llamar_openai(instrucciones, json.dumps(analisis, ensure_ascii=False))
     return FIRMA_VERA + "\n" + nota + "\n" + DESCARGO
